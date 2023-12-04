@@ -1,15 +1,7 @@
 import pandas as pd
-import ast
-from sklearn.metrics.pairwise import cosine_similarity
-import seaborn
-import numpy
-import matplotlib.pyplot as plot
-from scipy.sparse import csr_matrix
-from surprise import Reader, Dataset
-from surprise.model_selection import train_test_split
+from surprise import Dataset
 from surprise import SVDpp, accuracy, SVD
-from surprise.model_selection import cross_validate, KFold, GridSearchCV
-from collections import defaultdict
+from surprise.model_selection import GridSearchCV
 import time
 
 # data = Dataset.load_builtin("ml-100k")
@@ -97,7 +89,7 @@ Argumenty:
 
 def svdpp_algorithm_test_1(data, trainset, testset):
     param_grid = {"n_factors": [30]}
-    gs = GridSearchCV(SVDpp, param_grid, measures=["rmse"], cv=2, n_jobs=-1)
+    gs = GridSearchCV(SVDpp, param_grid, measures=["rmse"], cv=5, n_jobs=-1)
     gs.fit(data)
     print(gs.best_score["rmse"])
     print(gs.best_params["rmse"])
@@ -107,7 +99,7 @@ def svdpp_algorithm_test_1(data, trainset, testset):
 
 
 def get_gs_for_given_algo(data, algo, param_grid):
-    gs = GridSearchCV(algo, param_grid, measures=["rmse"], cv=3, n_jobs=15)
+    gs = GridSearchCV(algo, param_grid, measures=["rmse"], cv=5, n_jobs=-1)
     gs.fit(data)
     return gs
 
@@ -165,14 +157,12 @@ def get_param_grid_for_svdpp(n_factors=None, n_epochs=None, cache_ratings=None, 
             }
 
 
-def run_all_tests_for_svd_type_algo(data, algo, params, filename, trainset, testset):
+def run_all_tests_for_svd_type_algo(data, algo, params, filename):
     start = time.time()
     gs = get_gs_for_given_algo(data, algo, params)
     print(filename + " TEST RESULTS: ")
     print(gs.best_params["rmse"])
     print(gs.best_score["rmse"])
-    rec = gs.best_estimator["rmse"]
-    accuracy.rmse(rec.fit(trainset).test(testset))
     end = time.time()
     filename += '.csv'
     pd.DataFrame.from_dict(gs.cv_results).to_csv(filename)
@@ -182,9 +172,8 @@ def run_all_tests_for_svd_type_algo(data, algo, params, filename, trainset, test
 
 if __name__ == '__main__':
     data = Dataset.load_builtin("ml-100k")
-    trainset, testset = train_test_split(data, test_size=0.25)
 
-    factors_test_values = [25, 50, 75, 100, 125, 150, 175, 200]
+    factors_test_values = [5, 10, 15, 20, 25, 30, 35, 40, 50]
     epochs_test_values = [10, 20, 30, 40, 50, 60, 70, 80]
     biased_test_values = [True, False]
     lr_test_values = [0.001, 0.002, 0.003, 0.004, 0.005, 0.006, 0.007, 0.008]
@@ -232,29 +221,19 @@ if __name__ == '__main__':
                                                                            reg_all=reg_test_values)
 
     svd_test_data = [factors_test_param_grid, epochs_test_param_grid, biased_test_param_grid,
-                     lr_test_param_grid, reg_test_param_grid, factors_and_epochs_test_param_grid,
-                     factors_epochs_biased_test_param_grid, factors_epochs_lr_test_param_grid,
-                     factors_epochs_reg_test_param_grid, factors_epochs_lr_reg_test_param_grid]
+                     lr_test_param_grid, reg_test_param_grid]
 
     svd_file_names = ["factors_test_svd", "epochs_test_svd", "biased_test_svd",
-                      "lr_test_svd", "reg_test_svd", "factors_and_epochs_test_svd",
-                      "factors_epochs_biased_test_svd", "factors_epochs_lr_test_svd",
-                      "factors_epochs_reg_test_svd", "factors_epochs_lr_reg_test_svd"]
+                      "lr_test_svd", "reg_test_svd"]
 
     svdpp_test_data = [factors_test_param_grid_svdpp, epochs_test_param_grid_svdpp,
-                       lr_test_param_grid_svdpp, reg_test_param_grid_svdpp, factors_and_epochs_test_param_grid_svdpp,
-                       factors_epochs_lr_test_param_grid_svdpp,
-                       factors_epochs_reg_test_param_grid_svdpp, factors_epochs_lr_reg_test_param_grid_svdpp]
+                       lr_test_param_grid_svdpp, reg_test_param_grid_svdpp]
 
     svdpp_file_names = ["factors_test_svdpp", "epochs_test_svdpp",
-                        "lr_test_svdpp", "reg_test_svdpp", "factors_and_epochs_test_svdpp",
-                        "factors_epochs_lr_test_svdpp",
-                        "factors_epochs_reg_test_svdpp", "factors_epochs_lr_reg_test_svdpp"]
+                        "lr_test_svdpp", "reg_test_svdpp"]
 
-    # for i in range(len(svd_test_data)):
-    #     run_all_tests_for_svd_type_algo(data, SVD, svd_test_data[i], svd_file_names[i], trainset, testset)
+    for i in range(len(svd_test_data)):
+        run_all_tests_for_svd_type_algo(data, SVD, svd_test_data[i], svd_file_names[i])
 
-    # for i in range(len(svdpp_test_data)):
-    #     run_all_tests_for_svd_type_algo(data, SVDpp, svdpp_test_data[i], svdpp_file_names[i], trainset, testset)
-
-    svdpp_algorithm_test_1(data, trainset, testset)
+    for i in range(len(svdpp_test_data)):
+        run_all_tests_for_svd_type_algo(data, SVDpp, svdpp_test_data[i], svdpp_file_names[i])
